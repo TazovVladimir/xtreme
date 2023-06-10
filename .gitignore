@@ -1,5 +1,8 @@
 /client/node_modules/
 /server/node_modules/
 
-/client/node_modules/.vscode
-/server/node_modules/.vscode
+/client/node_modules/.vscode/
+/server/node_modules/.vscode/
+
+/client/node_modules/.gitignore
+/server/node_modules/.gitignore
