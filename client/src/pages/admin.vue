@@ -33,6 +33,7 @@ export default {
             }
         }
     },
+    // dsadsadsadassdasa
     mounted() {
         window.scrollTo({
             top: 0,
