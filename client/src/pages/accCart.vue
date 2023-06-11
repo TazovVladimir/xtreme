@@ -15,12 +15,13 @@ export default {
             check_agree: false,
             points: '',
             modalOrder: false,
+            isNotNull: false
 
         }
     },
     computed: {
         isValid(){
-            return this.check_agree && this.points !== '';
+            return this.check_agree && this.points !== '' && !this.isNotNull;
         },
         getReviews() {
             axios.get(`/get-reviews-user/${this.user_id}`)
@@ -98,7 +99,15 @@ export default {
                 const itemTotal = price * quantity;
                 total += itemTotal;
             });
-            return total.toLocaleString();
+            if(total != 0){
+                this.isNotNull = false;
+                return total.toLocaleString();
+            }else{
+                this.isNotNull = true;
+                return total.toLocaleString();
+            }
+            
+            
 
         },
         cartLength() {
@@ -619,7 +628,7 @@ export default {
                     <li class="total_li">
                         Пункт выдачи
                         <div class="c_point_wrapper" style="float:right">
-                            <div v-if="points == ''" class="c_point_btn">Не выбрано</div>
+                            <div  v-if="points == ''" class="c_point_btn">Не выбрано</div>
                             <div v-else class="c_point_btn">{{ points }}</div>
                             <ul class="c_point_items">
                                 <li class="c_point_item">
@@ -665,6 +674,12 @@ export default {
     </div>
 </template>
 <style scoped>
+.c_point_btn{
+    transition: 100ms all ease;
+}
+.c_point_btn{
+    cursor: pointer;
+}
 .c_point_wrapper {
     position: relative;
     transition: 200ms all ease;

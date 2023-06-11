@@ -28,8 +28,18 @@
                     </router-link>
                 </li>
                 <li>
-                    <router-link to="/extreme-item" class="footer-a">
-                        Экстремальные товары
+                    <router-link to="/clothes" class="footer-a">
+                        Одежда
+                    </router-link>
+                </li>
+                <li>
+                    <router-link to="/shoes" class="footer-a">
+                        Обувь
+                    </router-link>
+                </li>
+                <li>
+                    <router-link to="/inventory" class="footer-a">
+                        Инвентарь
                     </router-link>
                 </li>
             </ul>

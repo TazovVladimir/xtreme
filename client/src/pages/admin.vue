@@ -14,6 +14,8 @@ export default {
             sort_value: 'new',
             items: [],
             openInputs: false,
+            Allorder: [],
+            status: '',
 
             // formData
             formData: {
@@ -117,6 +119,43 @@ export default {
                 .catch(error => {
                     console.log(error);
                 });
+        },
+        logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user_id');
+            this.account_info = [];
+            this.$store.dispatch('delUserStatus');
+            this.$router.push('/')
+        },
+        async file() {
+            const file = await this.$refs.fileInput.files[0];
+            const formData = await new FormData();
+            formData.append('avatar', file);
+            await axios.post(`/update-avatar/${this.user_id}`, formData);
+            axios.get(`/account/${this.user_id}`)
+                .then(response => {
+                    this.account_info = response.data
+                })
+                .catch(error => (console.log(error)));
+        },
+        changeStatus(id, status) {
+            if (status == '1') {
+                this.status = 'accepted'
+            } else if (status == '2') {
+                this.status = 'send'
+            } else if (status == '3') {
+                this.status = 'completed'
+            }
+            axios.post('/update-status', {
+                id: id,
+                status: this.status,
+            })
+                .then((response) => {
+                    console.log(response)
+                })
+                .catch((error) => {
+                    console.log(error);
+                });
         }
 
     },
@@ -134,12 +173,116 @@ export default {
         cardLength() {
             return this.filteredItems.length
         },
+        getAllOrders() {
+            axios.get(`/get-all-orders`)
+                .then(response => {
+                    this.Allorder = response.data
+                })
+                .catch(error => {
+                    console.log(error)
+                });
+            return this.Allorder
+        },
     }
 }
 </script>
 <template>
     <section>
-        <h3 class="h3-catalog-title">Добро пожаловать, {{ name }}</h3>
+        <div class="acc-wrapper">
+            <div class="acc-acc">
+                <span class="acc-acc-theme" style="padding: 0;" title="изменить аватарку">
+                    <form>
+                        <label for="update-a" class="custom-file-upload">
+                            <input id="update-a" type="file" ref="fileInput" accept="image/*" @change="file">
+                            <i class='bx bx-pencil bx-sm'></i>
+                        </label>
+                        <button style="display: none;" type="submit">изменить</button>
+                    </form>
+                </span>
+                <span class="acc-acc-avatar-wrapper">
+                    <span class="acc-acc-avatar-wrapper-wrapper">
+                        <img v-for="item in account_info" :src="'http://localhost:5000/uploads/' + item.avatar" alt="">
+                    </span>
+                    <span v-for="item in account_info" class="acc-acc-avatar-wrapper-name">
+                        {{ item.name }}
+                    </span>
+                    <span class="acc-acc-avatar-wrapper-role">
+                        администратор
+                    </span>
+                </span>
+                <span class="acc-acc-logout" @click="logout">
+                    <i class='bx bx-exit bx-sm'></i>
+                </span>
+            </div>
+        </div>
+    </section>
+    <h3 class="h3-catalog-title">
+        Заявки
+    </h3>
+    <div class="main-table orderss">
+        <table cellpadding='0' cellspacing='0' style='border-collapse:collapse; border-radius: 10px;'>
+            <tr class="table_titles">
+                <th>id</th>
+                <th>id клиента</th>
+                <th>id товара</th>
+                <th>Название</th>
+                <th>Сумма</th>
+                <th>Цвет</th>
+                <th>Размер</th>
+                <th>Количество</th>
+                <th>Выдача</th>
+                <th>Статус</th>
+            </tr>
+            <tr class="table_par" v-for="item in getAllOrders">
+                <td>
+                    {{ item.id }}
+                </td>
+                <td>
+                    {{ item.user_id }}
+                </td>
+                <td>
+                    {{ item.item_id }}
+                </td>
+                <td>
+                    {{ item.title }}
+                </td>
+                <td>
+                    {{ item.price }}
+                </td>
+                <td>
+                    {{ item.color }}
+                </td>
+                <td>
+                    {{ item.size }}
+                </td>
+                <td>
+                    {{ item.quantity }}
+                </td>
+                <td>
+                    {{ item.point }}
+                </td>
+                <td>
+                    <div class="c_point_wrapper">
+                        <div v-if="item.status == 'accepted'" class="c_point_btn">Принят</div>
+                        <div v-if="item.status == 'send'" class="c_point_btn">Отправлен</div>
+                        <div v-if="item.status == 'completed'" class="c_point_btn">Завершен</div>
+                        <ul class="c_point_items">
+                            <li class="c_point_item" @click="changeStatus(item.id, 1)">
+                                Принят
+                            </li>
+                            <li class="c_point_item" @click="changeStatus(item.id, 2)">
+                                Отправлен
+                            </li>
+                            <li class="c_point_item" @click="changeStatus(item.id, 3)">
+                                Завершен
+                            </li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <section>
         <div class="filter_wrapper">
             <h3 class="h3-catalog-title" style="position:relative;display:flex; align-items:center;">
                 Товары
@@ -693,6 +836,202 @@ export default {
     </section>
 </template>
 <style scoped>
+.c_point_btn {
+    transition: 100ms all ease;
+}
+
+.c_point_btn:hover {
+    cursor: pointer;
+    opacity: 60%;
+}
+
+.c_point_wrapper {
+    position: relative;
+    transition: 200ms all ease;
+    padding-bottom: 20px;
+}
+
+.c_point_wrapper:hover {
+    color: #fff;
+}
+
+.c_point_wrapper:hover .c_point_items {
+    display: block;
+    background-color: var(--input-focus);
+    color: #fff;
+    font-weight: 300;
+
+}
+
+.c_point_items {
+    display: none;
+    border-radius: 7px;
+    position: absolute;
+    top: 25px;
+    right: 0;
+    width: 167px;
+    z-index: 999999;
+}
+
+.c_point_item {
+    padding: 3px 15px;
+    margin: 10px 0;
+    transition: 200ms all ease;
+}
+
+.c_point_item {
+    transition: 200ms all ease;
+}
+
+.c_point_item:hover {
+    cursor: pointer;
+    opacity: 70% !important;
+}
+
+.c_point_item:active {
+    opacity: 50% !important;
+}
+
+.orderss {
+    display: block;
+    width: 100% !important;
+}
+
+.orderss table {
+    width: 100%;
+}
+
+.acc-wrapper {
+    margin-top: 20px;
+    background-color: var(--back);
+    padding: 10px 0;
+    border-radius: 10px;
+    position: relative;
+    height: 260px;
+    box-shadow: 0px 5px 13px -3px rgba(34, 60, 80, 0.13);
+}
+
+.acc-acc-theme form {
+    width: 45px;
+    min-height: 45px;
+    max-height: 45px;
+}
+
+.custom-file-upload input[type="file"] {
+    display: none;
+}
+
+.custom-file-upload {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    width: 45px;
+    min-height: 45px;
+    max-height: 45px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.custom-file-upload i {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-right: -50%;
+    transform: translate(-50%, -50%);
+}
+
+.acc-acc-avatar-wrapper {
+    display: block;
+}
+
+.acc-acc-avatar-wrapper-wrapper {
+    background-color: rgb(112, 112, 112);
+    width: 122px;
+    height: 122px;
+    border-radius: 50%;
+    display: block;
+}
+
+.acc-acc-avatar-wrapper-name {
+    margin-top: 10px;
+    font-size: 20px;
+    font-weight: 400;
+    display: block;
+    text-align: center;
+    color: var(--color-text);
+}
+
+.acc-acc-avatar-wrapper-role {
+    font-weight: 300;
+    margin-top: 5px;
+    display: block;
+    text-align: center;
+    color: var(--drop-a);
+}
+
+.acc-acc-avatar-wrapper img {
+    width: 122px;
+    height: 122px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.acc-acc-theme {
+    display: block;
+    transition: 200ms all ease;
+    padding: 10px;
+    background-color: var(--icon-back);
+    border-radius: 7px;
+}
+
+.acc-acc-theme:hover,
+.acc-acc-logout:hover {
+    opacity: 70%;
+    cursor: pointer;
+}
+
+.acc-acc-theme:active,
+.acc-acc-logout:active {
+    opacity: 50%;
+}
+
+.acc-acc-theme i {
+    color: var(--icon-color);
+}
+
+.acc-acc-logout {
+    display: block;
+    transition: 200ms all ease;
+    padding: 10px;
+    background-color: var(--icon-back);
+    border-radius: 7px;
+}
+
+.acc-acc-logout i {
+    color: var(--icon-color);
+}
+
+.acc-acc {
+    position: absolute;
+    width: 300px;
+    /* height: 200px; */
+    top: 50%;
+    left: 50%;
+    margin-right: -50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+
+
+
+
+
+
+
 .contol_wrapper {
     display: block;
 }

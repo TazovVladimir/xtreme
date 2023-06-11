@@ -679,8 +679,47 @@ app.post('/add-to-orders', (req, res) => {
             msg: "Произошла ошибка на стороне сервера"
         })
     }
-
 });
+
+// get all orders
+app.get('/get-all-orders', (req, res) => {
+    try {
+        const query = `SELECT * FROM orders ORDER BY id DESC`;
+        connection.query(query, (err, results) => {
+            if (err) {
+                res.status(500).json({
+                    msg: "Ошибка"
+                });
+            } else {
+                res.json(results);
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            msg: "Произошла ошибка на стороне сервера"
+        })
+    }
+});
+// update status
+app.post('/update-status', (req, res) => {
+    try {
+        const id = req.body.id;
+        const status = req.body.status;
+        connection.query('UPDATE orders SET status = ? WHERE id = ?', [status, id], (error, results) => {
+            if (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Ошибка сервера' });
+            } else {
+                res.sendStatus(200);
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            msg: "Произошла ошибка на стороне сервера"
+        })
+    }
+})
+
 
 app.listen(port, () => {
     console.log(`Сервер запущен на порту -- ${port} --`);
