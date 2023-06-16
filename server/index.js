@@ -95,6 +95,7 @@ app.post('/register', async (req, res) => {
 app.post('/auth', authValidation, async (req, res) => {
     try {
         const errors = validationResult(req);
+        let admin = null;
         if (!errors.isEmpty()) {
             return res.status(400).json(errors.array());
         }
@@ -109,11 +110,17 @@ app.post('/auth', authValidation, async (req, res) => {
                     'secret123',
                 );
                 if (isValidPass) {
+                    if(results[0].admin == '0'){
+                        admin = 0
+                    }else if(results[0].admin == '1'){
+                        admin = 1
+                    }
                     res.status(200).json({
                         succes: "true",
                         login: login,
                         msg: `Пользователь с логином ${login} авторизован`,
                         token,
+                        admin
                     });
                 } else {
                     res.status(401).json({
@@ -189,7 +196,7 @@ app.post('/post-reviews', (req, res) => {
 app.get('/get-reviews/:id', (req, res) => {
     try {
         const id = req.params.id;
-        const sql = `SELECT * FROM rev WHERE item_id = '${id}' ORDER BY id DESC`
+        const sql = `SELECT * FROM rev WHERE item_id = '${id}' and status = '1' ORDER BY id DESC`
         connection.query(sql, (err, results) => {
             if (err) throw err;
             res.send(results);
@@ -380,7 +387,7 @@ app.get('/get-cart/:id', (req, res) => {
 app.get('/get-orders/:id', (req, res) => {
     try {
         const id = req.params.id;
-        connection.query(`SELECT * FROM orders WHERE user_id = '${id}' && status != 'completed'`, (err, results) => {
+        connection.query(`SELECT * FROM orders WHERE user_id = '${id}' && status != 'completed' ORDER BY id DESC`, (err, results) => {
             if (err) throw err;
             res.json(results);
         });
@@ -584,7 +591,25 @@ app.get('/get-all-random', (req, res) => {
         })
     }
 });
-
+// get promotion
+app.get('/get-all-promotion', (req, res) => {
+    try {
+        const query = `SELECT * FROM all_catalog WHERE old_price != '0'`;
+        connection.query(query, (err, results) => {
+            if (err) {
+                res.status(500).json({
+                    msg: "Ошибка"
+                });
+            } else {
+                res.json(results);
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            msg: "Произошла ошибка на стороне сервера"
+        })
+    }
+});
 
 // /add-new-item
 app.post('/add-new-item', upload.array('images', 5), (req, res) => {
@@ -593,7 +618,6 @@ app.post('/add-new-item', upload.array('images', 5), (req, res) => {
         const images = req.files.map((file) => file.filename);
         const sql = 'INSERT INTO all_catalog (category, type, color, size, manufacturer, title, description, new_price, weight, material, count_in_store, img1, img2, img3, img4, img5, sex) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         const values = [selected_cat_form, selected_type_form, selected_color_form, selected_size_form, form_manufacturer, form_title, form_description, form_newPrice, form_weight, form_material, form_count_in_store, ...images, 'мужской'];
-
         connection.query(sql, values, (err, result) => {
             if (err) {
                 console.error('Ошибка при добавлении товара в базу данных: ', err);
@@ -608,7 +632,6 @@ app.post('/add-new-item', upload.array('images', 5), (req, res) => {
             msg: "Произошла ошибка на стороне сервера"
         })
     }
-
 });
 // del items admin by id
 app.delete('/del-item-id/:id', (req, res) => {
@@ -719,7 +742,129 @@ app.post('/update-status', (req, res) => {
         })
     }
 })
-
+// update status revs
+app.post('/update-status-revs', (req, res) => {
+    try {
+        const id = req.body.id;
+        const status = req.body.status;
+        connection.query('UPDATE rev SET status = ? WHERE id = ?', [status, id], (error, results) => {
+            if (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Ошибка сервера' });
+            } else {
+                res.sendStatus(200);
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            msg: "Произошла ошибка на стороне сервера"
+        })
+    }
+})
+// change name
+app.post('/change-name/', (req, res) => {
+    try {
+        const user_id = req.body.user_id;
+        const newName = req.body.newName;
+        connection.query('UPDATE users SET name = ? WHERE id = ?', [newName, user_id], (error, results) => {
+            if (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Ошибка сервера' });
+            } else {
+                res.json({
+                    succes: "true",
+                    name: newName,
+                });
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            msg: "Произошла ошибка на стороне сервера"
+        })
+    }
+})
+// /change-pass/
+app.post('/change-pass/', (req, res) => {
+    try {
+        const user_id = req.body.user_id;
+        const newPass = req.body.newPass;
+        const newnewPass = req.body.newnewPass;
+        const query = `SELECT * FROM users WHERE id = ${user_id}`;
+        connection.query(query, async (err, results) => {
+            if (err) {
+                res.status(500).json({
+                    msg: "Ошибка"
+                });
+            } else {
+                if (results) {
+                    await bcrypt.compare(newPass, results[0].password, async (error, isMatch) => {
+                        if (error) {
+                            console.error('Ошибка при сравнении паролей:', error);
+                            return;
+                        }
+                        if (isMatch) {
+                            const salt = await bcrypt.genSalt(10);
+                            const hash = await bcrypt.hash(newnewPass, salt);
+                            connection.query('UPDATE users SET password = ? WHERE id = ?', [hash, user_id], (error, results) => {
+                                if (error) {
+                                    console.error(error);
+                                    res.status(500).json({ error: 'Ошибка сервера' });
+                                } else {
+                                    res.json({
+                                        succes: "true",
+                                        name: hash,
+                                    });
+                                }
+                            });
+                        } else {
+                            res.status(401).json({ error: 'Ошибка сервера' });
+                        }
+                    });
+                }
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            msg: "Произошла ошибка на стороне сервера"
+        })
+    }
+})
+// get revs admin
+app.get('/get-all-revs', (req, res) => {
+    try {
+        const query = `SELECT * FROM rev ORDER BY id DESC`;
+        connection.query(query, (err, results) => {
+            if (err) {
+                res.status(500).json({
+                    msg: "Ошибка"
+                });
+            } else {
+                res.json(results);
+            }
+        });
+    } catch (err) {
+        res.status(500).json({
+            msg: "Произошла ошибка на стороне сервера"
+        })
+    }
+});
+// edit-item
+app.put('/edit-item/:id', (req, res) => {
+    const id = req.params.id;
+    const updated = req.body;
+    connection.query(
+      'UPDATE all_catalog SET sex = ?, title = ?, description = ?, old_price = ?, new_price = ?, size = ?, color = ?, count_in_store = ?, manufacturer = ?, material = ?, weight = ? WHERE id = ?',
+      [updated.sex, updated.title, updated.description, updated.old_price, updated.new_price, updated.size, updated.color, updated.count_in_store, updated.manufacturer, updated.material, updated.weight, id],
+      (err, result) => {
+        if (err) {
+          console.error('Ошибка при обновлении записи: ', err);
+          res.sendStatus(500);
+          return;
+        }
+        res.sendStatus(200);
+      }
+    );
+  });
 
 app.listen(port, () => {
     console.log(`Сервер запущен на порту -- ${port} --`);

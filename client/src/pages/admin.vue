@@ -15,7 +15,9 @@ export default {
             items: [],
             openInputs: false,
             Allorder: [],
+            Allrevs: [],
             status: '',
+            close_btn_add_btn: false,
 
             // formData
             formData: {
@@ -37,6 +39,17 @@ export default {
     },
     // dsadsadsadassdasa
     mounted() {
+        const data = localStorage.getItem('token');
+        const admin = localStorage.getItem('admin');
+        if (data) {
+            if (admin == '0') {
+                this.$router.push('/account');
+            } else if (admin == '1') {
+                this.$router.push('/admin');
+            }
+        } else {
+            this.$router.push('/auth');
+        }
         window.scrollTo({
             top: 0,
             behavior: "smooth"
@@ -58,6 +71,18 @@ export default {
 
     },
     methods: {
+        saveChanges(item) {
+            axios.put(`/edit-item/${item.id}`, item)
+                .then(response => {
+                    // console.log('Изменения сохранены');
+                })
+                .catch(error => {
+                    console.error('Ошибка при сохранении изменений', error);
+                });
+        },
+        close_btn_add() {
+            this.close_btn_add_btn = false
+        },
         open_drop_type() {
             this.is_drop_type = !this.is_drop_type
         },
@@ -105,13 +130,34 @@ export default {
                 },
             })
                 .then(response => {
-                    console.log(response.data);
+                    this.close_btn_add_btn = true
+                    this.formData.selected_cat_form = ''
+                    this.formData.selected_type_form = ''
+                    this.formData.selected_color_form = ''
+                    this.formData.selected_size_form = ''
+                    this.formData.form_manufacturer = ''
+                    this.formData.form_title = ''
+                    this.formData.form_description = ''
+                    this.formData.form_newPrice = ''
+                    this.formData.form_weight = ''
+                    this.formData.form_material = ''
+                    this.formData.form_count_in_store = ''
+                    // console.log(response.data);
+                    axios
+                        .get('/get-all-by-catalog-type?category=all')
+                        .then(response => {
+                            this.items = response.data
+                        })
+                        .catch(error => {
+                            console.error(error);
+                        })
                 })
                 .catch(error => {
                     console.log(error);
                 });
         },
-        deleteItemById(id) {
+        deleteItemById(id, index) {
+            this.filteredItems.splice(index, 1);
             axios.delete('/del-item-id/' + id)
                 .then(response => {
                     console.log(response.data);
@@ -123,6 +169,7 @@ export default {
         logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('user_id');
+            localStorage.removeItem('admin');
             this.account_info = [];
             this.$store.dispatch('delUserStatus');
             this.$router.push('/')
@@ -156,6 +203,23 @@ export default {
                 .catch((error) => {
                     console.log(error);
                 });
+        },
+        changeStatusRevs(id, status) {
+            if (status == '1') {
+                this.status = '1'
+            } else if (status == '0') {
+                this.status = '0'
+            }
+            axios.post('/update-status-revs', {
+                id: id,
+                status: this.status,
+            })
+                .then((response) => {
+                    console.log(response)
+                })
+                .catch((error) => {
+                    console.log(error);
+                });
         }
 
     },
@@ -167,6 +231,9 @@ export default {
                 const selectedColorMatch = this.selected_color.length === 0 || this.selected_color.includes(item.color);
                 const priceMatch = this.rangeValue === 0 || item.new_price <= this.rangeValue;
                 return searchQueryMatch && selectedTypeMatch && selectedColorMatch && priceMatch;
+            });
+            filteredItems.sort((a, b) => {
+                return (a.id - b.id) * -1;
             });
             return filteredItems;
         },
@@ -183,11 +250,35 @@ export default {
                 });
             return this.Allorder
         },
+        getAllRevs() {
+            axios.get(`/get-all-revs`)
+                .then(response => {
+                    this.Allrevs = response.data
+                })
+                .catch(error => {
+                    console.log(error)
+                });
+            return this.Allrevs
+        },
     }
 }
 </script>
 <template>
     <section>
+        <!-- modal add-->
+        <div class="alert_add_to_cart_wrapper" :class="{ alert_add_to_cart_wrapper_open: close_btn_add_btn }">
+            <div class="alert_add_to_cart_obj" :class="{ alert_add_to_cart_obj_open: close_btn_add_btn }">
+                <span class="alert_add_to_cart_ok_wrapper">
+                    <i style="font-weight: 100 !important;" class='alert_ok bx bx-plus'></i>
+                </span>
+                <span class="alert_add_to_cart_text">
+                    Товар добавлен
+                </span>
+                <span class="btn_close_modal" @click="close_btn_add">
+                    <i class='bx bx-x'></i>
+                </span>
+            </div>
+        </div>
         <div class="acc-wrapper">
             <div class="acc-acc">
                 <span class="acc-acc-theme" style="padding: 0;" title="изменить аватарку">
@@ -763,70 +854,50 @@ export default {
                     <th>Производитель</th>
                     <th>Материал</th>
                     <th>Вес</th>
-                    <th>img1</th>
-                    <th>img2</th>
-                    <th>img3</th>
-                    <th>img4</th>
-                    <th>img5</th>
                     <th>Действия</th>
                 </tr>
-                <tr class="table_par" v-for="item in filteredItems">
+                <tr class="table_par" v-for="(item, index) in filteredItems">
                     <td>
                         {{ item.id }}
                     </td>
                     <td>
-                        <input class="table-input-sex" type="text" :value="item.sex">
+                        <input class="table-input-sex" type="text" v-model="item.sex" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <input class="table-input" type="text" :value="item.title">
+                        <input class="table-input" type="text" v-model="item.title" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <textarea>{{ item.description }}</textarea>
+                        <textarea v-model="item.description" @input="saveChanges(item)"></textarea>
                     </td>
                     <td>
-                        <input class="table-input-num" type="text" :value="item.old_price">
+                        <input class="table-input-num" type="text" v-model="item.old_price" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <input class="table-input-num" type="text" :value="item.new_price">
+                        <input class="table-input-num" type="text" v-model="item.new_price" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <input class="table-input-num" type="text" :value="item.size">
+                        <input class="table-input-num" type="text" v-model="item.size" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <input class="table-input-num" type="text" :value="item.color">
+                        <input class="table-input-num" type="text" v-model="item.color" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <input class="table-input-num" type="text" :value="item.count_in_store">
+                        <input class="table-input-num" type="text" v-model="item.count_in_store" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <input class="table-input" type="text" :value="item.manufacturer">
+                        <input class="table-input" type="text" v-model="item.manufacturer" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <input class="table-input" type="text" :value="item.material">
+                        <input class="table-input" type="text" v-model="item.material" @input="saveChanges(item)">
                     </td>
                     <td>
-                        <input class="table-input-num" type="text" :value="item.weight">
-                    </td>
-                    <td>
-                        <input class="table-input" type="text" :value="item.img1">
-                    </td>
-                    <td>
-                        <input class="table-input" type="text" :value="item.img2">
-                    </td>
-                    <td>
-                        <input class="table-input" type="text" :value="item.img3">
-                    </td>
-                    <td>
-                        <input class="table-input" type="text" :value="item.img4">
-                    </td>
-                    <td>
-                        <input class="table-input" type="text" :value="item.img5">
+                        <input class="table-input-num" type="text" v-model="item.weight" @input="saveChanges(item)">
                     </td>
                     <td class="fixed-cotrols">
-                        <span class="contol_wrapper" title="Сохранить">
+                        <!-- <span class="contol_wrapper" title="Сохранить">
                             <i class='bx bx-check'></i>
-                        </span>
-                        <span class="contol_wrapper" @click="deleteItemById(item.id)" title="Удалить">
+                        </span> -->
+                        <span class="contol_wrapper" @click="deleteItemById(item.id, index)" title="Удалить">
                             <i class='bx bx-trash'></i>
                         </span>
                     </td>
@@ -834,6 +905,60 @@ export default {
             </table>
         </div>
     </section>
+    <h3 class="h3-catalog-title">
+        Отзывы
+    </h3>
+    <div class="main-table orderss">
+        <table cellpadding='0' cellspacing='0' style='border-collapse:collapse; border-radius: 10px;'>
+            <tr class="table_titles">
+                <th>id</th>
+                <th>id пользования</th>
+                <th>Имя пользования</th>
+                <th>id товара</th>
+                <th>Название</th>
+                <th>Отзыв</th>
+                <th>Дата</th>
+                <th>Статус</th>
+            </tr>
+            <tr class="table_par" v-for="item in getAllRevs">
+                <td>
+                    {{ item.id }}
+                </td>
+                <td>
+                    {{ item.user_id }}
+                </td>
+                <td>
+                    {{ item.user_name }}
+                </td>
+                <td>
+                    {{ item.item_title }}
+                </td>
+                <td>
+                    {{ item.item_id }}
+                </td>
+                <td>
+                    {{ item.text }}
+                </td>
+                <td>
+                    {{ item.date }}
+                </td>
+                <td>
+                    <div class="c_point_wrapper">
+                        <div v-if="item.status == '1'" class="c_point_btn">Принят</div>
+                        <div v-if="item.status == '0'" class="c_point_btn">Отклонен</div>
+                        <ul class="c_point_items">
+                            <li class="c_point_item" @click="changeStatusRevs(item.id, 1)">
+                                Принять
+                            </li>
+                            <li class="c_point_item" @click="changeStatusRevs(item.id, 0)">
+                                Отклонить
+                            </li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
 </template>
 <style scoped>
 .c_point_btn {
@@ -851,16 +976,12 @@ export default {
     padding-bottom: 20px;
 }
 
-.c_point_wrapper:hover {
-    color: #fff;
-}
 
 .c_point_wrapper:hover .c_point_items {
     display: block;
     background-color: var(--input-focus);
-    color: #fff;
+    /* color: var(--color-text); */
     font-weight: 300;
-
 }
 
 .c_point_items {

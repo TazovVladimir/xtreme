@@ -11,6 +11,7 @@ export default {
             error: [],
             array: [],
             user_id: localStorage.getItem('user_id'),
+            admin: localStorage.getItem('admin'),
             account_info: null,
             name: '',
             text: '',
@@ -19,6 +20,7 @@ export default {
             revs: null,
             isDisabled: true,
             close_btn_alert_btn: false,
+            close_btn_rev_btn: false,
             items: [],
         }
     },
@@ -139,7 +141,8 @@ export default {
             })
                 .then((response) => {
                     this.text = '',
-                        this.rating = ''
+                        this.rating = '',
+                        this.close_btn_rev_btn = true
                 })
                 .catch((error) => {
                     console.log(error);
@@ -154,6 +157,9 @@ export default {
         },
         close_btn_alert() {
             this.close_btn_alert_btn = false
+        },
+        close_btn_rev() {
+            this.close_btn_rev_btn = false
         },
         goBack() {
             this.$router.go(-1)
@@ -326,16 +332,18 @@ export default {
                         серый
                     </span>
                 </li>
-                <li @click="checkedItems" style="width: 300px" class="btn" v-if="getItems[0].count_in_store != 0 && user_id">
+                <button disabled class="btn" v-if="admin == '1'" style="width:300px; font-size: 16px; font-weight: 300;">
+                    Нет доступа
+                </button>
+                <li @click="checkedItems" style="width: 300px" class="btn" v-else-if="getItems[0].count_in_store != 0 && user_id">
                     Добавить в корзину
                 </li>
                 <button disabled class="btn" v-else-if="!user_id" style="width:300px; font-size: 16px; font-weight: 300;">
                     Вы не авторизованы
                 </button>
-                <button disabled class="btn" v-else style="width:300px; font-size: 16px; font-weight: 300;">
+                <button disabled class="btn" v-else-if="getItems[0].count_in_store == 0" style="width:300px; font-size: 16px; font-weight: 300;">
                     Товара нет в наличии
                 </button>
-
             </ul>
             <div class="alert_add_to_cart_wrapper" :class="{ alert_add_to_cart_wrapper_open: close_btn_alert_btn }">
                 <div class="alert_add_to_cart_obj" :class="{ alert_add_to_cart_obj_open: close_btn_alert_btn }">
@@ -353,8 +361,24 @@ export default {
                     </span>
                 </div>
             </div>
+            <div class="alert_add_to_cart_wrapper" :class="{ alert_add_to_cart_wrapper_open: close_btn_rev_btn }">
+                <div class="alert_add_to_cart_obj" :class="{ alert_add_to_cart_obj_open: close_btn_rev_btn }">
+                    <span class="alert_add_to_cart_ok_wrapper">
+                        <i style="font-weight: 400 !important; top: 15%; left: 15%;" class='alert_ok bx bx-time-five bx-tada' ></i>
+                    </span>
+                    <span class="alert_add_to_cart_text">
+                        Ваш отзыв проверяется
+                    </span>
+                    <div class="btn btn_alert" @click="goToCart">
+                        В аккаунт
+                    </div>
+                    <span class="btn_close_modal" @click="close_btn_rev">
+                        <i class='bx bx-x'></i>
+                    </span>
+                </div>
+            </div>
         </div>
-        <div class="post-rev" v-if="user_id">
+        <div class="post-rev" v-if="user_id && admin == '0'">
             <h3 class="h3-catalog-title" style="padding-top: 0;">Оставить отзыв</h3>
             <div class="post-rev-item">
                 <div class="post-rev-left-avatar-wrapper">

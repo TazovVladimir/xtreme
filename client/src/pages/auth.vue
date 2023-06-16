@@ -14,23 +14,33 @@ export default {
         };
     },
     methods: {
-        async auth() {
+        auth() {
             const { login, password } = this;
             try {
-                const response = await axios.post('/auth', { login, password });
-                localStorage.setItem('token', response.data.token);
-                this.isError = false;
-                await this.$store.dispatch('setUserStatus');
-                await this.$store.dispatch('setUserId');
-                await this.$router.push('/account');
+                axios.post('/auth', { login, password })
+                    .then(response => {
+                        localStorage.setItem('token', response.data.token);
+                        localStorage.setItem('admin', response.data.admin);
+                        this.$store.dispatch('setUserStatus');
+                        this.$store.dispatch('setUserId');
+                        let admin = localStorage.getItem('admin');
+                        this.isError = false;
+                        if (admin == '0') {
+                            this.$router.push('/account');
+                        }else if (admin == '1') {
+                            this.$router.push('/admin');
+                        }
+                        window.location.reload();
+                    })
+                    .catch(error => (console.log(error)));
             } catch (error) {
                 console.error(error);
                 this.error = true,
-                this.isnTrue =  true,
-                this.isnTruep =  true,
-                this.isDisabled = true,
-                this.isTrue =  false,
-                this.isTruep =  false
+                    this.isnTrue = true,
+                    this.isnTruep = true,
+                    this.isDisabled = true,
+                    this.isTrue = false,
+                    this.isTruep = false
             }
         },
 
@@ -64,8 +74,15 @@ export default {
     },
     mounted() {
         const data = localStorage.getItem('token');
+        const admin = localStorage.getItem('admin');
         if (data) {
-            this.$router.push('/');
+            if (admin == '0') {
+                this.$router.push('/account');
+            } else if (admin == '1') {
+                this.$router.push('/admin');
+            }
+        }else{
+            this.$router.push('/auth');
         }
         window.scrollTo({
             top: 0,
@@ -108,10 +125,10 @@ export default {
     </section>
 </template>
 <style scoped>
-
 .input-error {
     outline: 1px solid rgb(255, 97, 97);
 }
+
 .section-reg {
     position: absolute;
     top: 50%;
@@ -221,4 +238,5 @@ span a:hover {
     font-size: 16px;
     opacity: 1;
     transition: 200ms all ease;
-}</style>
+}
+</style>

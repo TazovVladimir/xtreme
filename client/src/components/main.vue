@@ -37,9 +37,10 @@ export default {
         },
         toAcc() {
             this.$router.push('/account')
-        }
+        },
     },
     mounted() {
+        
         const data = localStorage.getItem('token');
         if (data) {
             this.$store.dispatch('setUserStatus');
@@ -59,6 +60,14 @@ export default {
         isAuth() {
             return this.$store.state.user;
         },
+        getAcc() {
+            axios.get(`/account/${this.user_id}`)
+                .then(response => {
+                    this.account_info = response.data
+                })
+                .catch(error => (console.log(error)));
+            return this.account_info
+        }
     }
 }
 </script>
@@ -66,15 +75,14 @@ export default {
     <main v-if="!$route.meta.hideHeader">
         <div class="top-menu" :class="{ out: !ifOut }">
             <h2 class="h2">{{ $route.name }} <span class="h2-span">{{ $route.meta.cat_name }}</span></h2>
-            
+
             <div class="acc-par">
                 <!-- <span class="acc-par-cart">
                     <i class="p-icon-catalog bx bx-cart bx-sm"></i>
                 </span> -->
                 <ul class="to-acc" v-if="isAuth" @click="toAcc">
                     <li class="to-acc-items to-acc-items-avatar-wrapper">
-                        <img v-for="item in account_info" :src="'http://localhost:5000/uploads/' + item.avatar"
-                            alt="avatar">
+                        <img v-for="item in getAcc" :src="'http://localhost:5000/uploads/' + item.avatar" alt="avatar">
                     </li>
                     <li class="to-acc-items to-acc-items-name" v-for="item in account_info">
                         {{ item.name }}
@@ -102,12 +110,14 @@ export default {
     display: flex;
     align-items: center;
 }
-.h2-span{
+
+.h2-span {
     font-weight: 400;
     font-size: 18px;
     color: var(--drop-a);
     padding-left: 3px;
 }
+
 .to-acc-items-cart {
     position: absolute;
     left: 0;
@@ -145,7 +155,7 @@ main {
     justify-content: space-between;
     align-items: center;
     /* border-bottom: 1px solid var(--border); */
-    box-shadow: 0px 10px 5px -6px  var(--main-top);
+    box-shadow: 0px 10px 5px -6px var(--main-top);
 }
 
 h2 {

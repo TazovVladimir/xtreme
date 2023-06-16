@@ -15,12 +15,18 @@ export default {
             check_agree: false,
             points: '',
             modalOrder: false,
-            isNotNull: false
-
+            isNotNull: false,
+            newName: '',
+            newPass: '',
+            newnewPass: '',
+            isModalNewName: false,
+            isModalNewPass: false,
+            error: false,
+            passwordVisible: false
         }
     },
     computed: {
-        isValid(){
+        isValid() {
             return this.check_agree && this.points !== '' && !this.isNotNull;
         },
         getReviews() {
@@ -41,8 +47,6 @@ export default {
                 return this.getReviews.length
             }
         },
-
-
         orderLenght() {
             if (this.getOrders === null) {
                 return 0
@@ -57,9 +61,6 @@ export default {
                 return this.getOrdersCompleted.length
             }
         },
-
-
-
         getCart() {
             axios.get(`/get-cart/${this.user_id}`)
                 .then(response => {
@@ -99,16 +100,13 @@ export default {
                 const itemTotal = price * quantity;
                 total += itemTotal;
             });
-            if(total != 0){
+            if (total != 0) {
                 this.isNotNull = false;
                 return total.toLocaleString();
-            }else{
+            } else {
                 this.isNotNull = true;
                 return total.toLocaleString();
             }
-            
-            
-
         },
         cartLength() {
             const cartLengths = this.getCart.filter(item => item.selected == 'true');
@@ -129,6 +127,52 @@ export default {
 
     },
     methods: {
+        togglePasswordVisibility() {
+            this.passwordVisible = !this.passwordVisible;
+        },
+        openModalNewName() {
+            this.isModalNewName = true
+        },
+        closeModalNewName() {
+            this.isModalNewName = false
+        },
+        openModalNewPass() {
+            this.isModalNewPass = true
+        },
+        closeModalNewPass() {
+            this.isModalNewPass = false
+        },
+        changeName() {
+            axios.post(`/change-name/`, { user_id: this.user_id, newName: this.newName })
+                .then((response) => {
+                    // console.log(response)
+                    this.isModalNewName = false
+                    this.account_info[0].name = response.data.name
+                    this.newName = response.data.name
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        },
+        changePass() {
+            axios.post(`/change-pass/`, { user_id: this.user_id, newPass: this.newPass, newnewPass: this.newnewPass })
+                .then((response) => {
+                    this.isModalNewPass = false
+                    this.newnewPass = ''
+                    this.newPass = ''
+                    this.logout()
+                    this.$router.push('/auth');
+                })
+                .catch(error => {
+                    console.log(error);
+                    this.error = true;
+                });
+        },
+        validateInputs() {
+            if (this.newPass.length >= 2 || this.newnewPass.length >= 2) {
+                this.error = false
+            }
+        },
         order_status_active() {
             this.order_status_comp = true
         },
@@ -231,6 +275,7 @@ export default {
         logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('user_id');
+            localStorage.removeItem('admin');
             this.account_info = [];
             this.$store.dispatch('delUserStatus');
             this.$router.push('/')
@@ -270,7 +315,7 @@ export default {
                     console.log(error);
                 });
         },
-        closeModalOrder(){
+        closeModalOrder() {
             this.modalOrder = false
         }
 
@@ -283,17 +328,80 @@ export default {
         axios.get(`/account/${this.user_id}`)
             .then(response => {
                 this.account_info = response.data
+                this.newName = this.account_info[0].name
             })
             .catch(error => (console.log(error)));
 
         const data = localStorage.getItem('token');
-        if (!data) {
+        const admin = localStorage.getItem('admin');
+        if (data) {
+            if (admin == '0') {
+                this.$router.push('/account');
+            } else if (admin == '1') {
+                this.$router.push('/admin');
+            }
+        } else {
             this.$router.push('/auth');
         }
+
     }
 }
 </script>
 <template>
+    <!-- new name -->
+    <div class="alert_add_to_cart_wrapper" :class="{ alert_add_to_cart_wrapper_open: isModalNewName }">
+        <div style="padding: 60px 90px;" class="alert_add_to_cart_obj"
+            :class="{ alert_add_to_cart_obj_open: isModalNewName }">
+            <p class="form-title">Новое имя пользователя</p>
+            <form @submit.prevent="changeName">
+                <div class="form-item">
+                    <label for="newName">
+                        Имя:
+                        <input name="newName" minlength="2" pattern="^(?!\s|<[^>]*>)[а-яА-ЯёЁ]+$" type="text"
+                            v-model="newName" placeholder="Владимир" required title="Введите кириллицей ваше имя">
+                    </label>
+                </div>
+                <button type="submit" class="to-acc-to">Изменить</button>
+            </form>
+            <span class="btn_close_modal" @click="closeModalNewName">
+                <i class='bx bx-x'></i>
+            </span>
+        </div>
+    </div>
+    <!-- new passwword -->
+    <div class="alert_add_to_cart_wrapper" :class="{ alert_add_to_cart_wrapper_open: isModalNewPass }">
+        <div style="padding: 60px 90px;" class="alert_add_to_cart_obj"
+            :class="{ alert_add_to_cart_obj_open: isModalNewPass }">
+            <p class="form-title">Новый пароль пользователя</p>
+            <form @submit.prevent="changePass">
+                <div class="form-item">
+                    <label for="newPass">
+                        Текущий пароль:
+                        <input :class="{ 'input-error': error }" @input="validateInputs" name="newPass" minlength="8"
+                            :type="passwordVisible ? 'text' : 'password'" v-model="newPass" placeholder="****" required
+                            title="Минимум 8 символов">
+                        <i @click="togglePasswordVisibility" class='bx bx-hide'></i>
+                    </label>
+                </div>
+                <div class="form-item" style="margin-top: 0 !important;">
+                    <label for="newnewPass">
+                        Новый пароль:
+                        <input :class="{ 'input-error': error }" @input="validateInputs" name="newnewPass" minlength="8"
+                            :type="passwordVisible ? 'text' : 'password'" v-model="newnewPass" placeholder="****" required
+                            title="Минимум 8 символов">
+                        <i @click="togglePasswordVisibility" class='bx bx-hide'></i>
+                    </label>
+                </div>
+                <button type="submit" class="to-acc-to">Изменить</button>
+            </form>
+            <span class="btn_close_modal" @click="closeModalNewPass">
+                <i class='bx bx-x'></i>
+            </span>
+        </div>
+    </div>
+
+
+
     <div class="alert_add_to_cart_wrapper" :class="{ alert_add_to_cart_wrapper_open: errors }">
         <div style="padding: 65px 120px;" class="alert_add_to_cart_obj" :class="{ alert_add_to_cart_obj_open: errors }">
             <span class="alert_add_to_cart_ok_wrapper">
@@ -323,11 +431,14 @@ export default {
     </div>
     <div class="acc-wrapper">
         <div class="acc-acc">
-            <span class="acc-acc-theme" style="padding: 0;" title="изменить аватарку">
+            <span class="acc-acc-logout" @click="openModalNewName" title="Изменить имя">
+                <i class='bx bx-user-circle bx-sm'></i>
+            </span>
+            <span class="acc-acc-theme" style="padding: 0;" title="Изменить аватарку">
                 <form>
                     <label for="update-a" class="custom-file-upload">
                         <input id="update-a" type="file" ref="fileInput" accept="image/*" @change="file">
-                        <i class='bx bx-pencil bx-sm'></i>
+                        <i class='bx bx-image bx-sm'></i>
                     </label>
                     <button style="display: none;" type="submit">изменить</button>
                 </form>
@@ -343,7 +454,10 @@ export default {
                     пользователь
                 </span>
             </span>
-            <span class="acc-acc-logout" @click="logout">
+            <span class="acc-acc-logout" @click="openModalNewPass" title="Изменить пароль">
+                <i class='bx bx-lock-alt bx-sm'></i>
+            </span>
+            <span class="acc-acc-logout" @click="logout" title="Выйти с аккаунта">
                 <i class='bx bx-exit bx-sm'></i>
             </span>
         </div>
@@ -628,28 +742,28 @@ export default {
                     <li class="total_li">
                         Пункт выдачи
                         <div class="c_point_wrapper" style="float:right">
-                            <div  v-if="points == ''" class="c_point_btn">Не выбрано</div>
+                            <div v-if="points == ''" class="c_point_btn">Не выбрано</div>
                             <div v-else class="c_point_btn">{{ points }}</div>
                             <ul class="c_point_items">
                                 <li class="c_point_item">
-                                    <input class="select_hidden_input" type="radio" id="point1" value="Пункт выдачи №1"
+                                    <input class="select_hidden_input" type="radio" id="point1" value="Проспект Мира, 71/23"
                                         v-model="points">
-                                    <label for="point1">Пункт выдачи №1</label>
+                                    <label for="point1">Проспект Мира, 71/23</label>
                                 </li>
                                 <li class="c_point_item">
-                                    <input class="select_hidden_input" type="radio" id="point2" value="Пункт выдачи №2"
+                                    <input class="select_hidden_input" type="radio" id="point2" value="Цветочный бульвар, 8"
                                         v-model="points">
-                                    <label for="point2">Пункт выдачи №1</label>
+                                    <label for="point2">Цветочный бульвар, 8</label>
                                 </li>
                                 <li class="c_point_item">
-                                    <input class="select_hidden_input" type="radio" id="point3" value="Пункт выдачи №4"
+                                    <input class="select_hidden_input" type="radio" id="point3" value="Комарова, 13"
                                         v-model="points">
-                                    <label for="point3">Пункт выдачи №3</label>
+                                    <label for="point3">Комарова, 13</label>
                                 </li>
                                 <li class="c_point_item">
-                                    <input class="select_hidden_input" type="radio" id="point4" value="Пункт выдачи №4"
+                                    <input class="select_hidden_input" type="radio" id="point4" value="Батенчука, 12"
                                         v-model="points">
-                                    <label for="point4">Пункт выдачи №4</label>
+                                    <label for="point4">Батенчука, 12</label>
                                 </li>
                             </ul>
                         </div>
@@ -657,7 +771,8 @@ export default {
 
                     </li>
                     <li>
-                        <button @click="addToOrders" :disabled="!isValid" style="margin-bottom: 20px; width: 100%" class="btn">
+                        <button @click="addToOrders" :disabled="!isValid" style="margin-bottom: 20px; width: 100%"
+                            class="btn">
                             Перейти к оплате
                         </button>
                     </li>
@@ -674,12 +789,99 @@ export default {
     </div>
 </template>
 <style scoped>
-.c_point_btn{
-    transition: 100ms all ease;
+.input-error {
+    outline: 1px solid rgb(255, 97, 97);
 }
-.c_point_btn{
+
+.to-acc-to {
+    border: none;
+    bottom: 20px;
+    padding: 10px 65px 10px 65px;
+    border-radius: 7px;
+    display: block;
+    transition: 200ms all ease;
+    background-color: var(--alert-btn);
+    color: var(--alert-btn_color);
+    font-size: 16px;
+    font-weight: 400;
+    text-align: center !important;
+    width: 90%;
+    margin: 0 auto;
+}
+
+
+.to-acc-to:hover {
+    opacity: 70%;
     cursor: pointer;
 }
+
+.to-acc-to:active {
+    opacity: 50%;
+}
+
+.alert_add_to_cart_obj form {
+    width: 250px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-title {
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--color-text);
+    text-align: center;
+    padding: 0 0 !important;
+}
+
+.form-item {
+    display: flex;
+    flex-direction: column;
+    margin: 20px 0;
+}
+
+.form-item label {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.form-item label i {
+    position: absolute;
+    top: 69%;
+    right: 10px;
+    transform: translate(0, -50%);
+    font-size: 18px;
+    transition: 200ms all ease;
+}
+
+.form-item label i:hover {
+    opacity: 80%;
+    cursor: pointer;
+}
+
+.form-item label i:active {
+    opacity: 60%;
+}
+
+
+.form-item label input {
+    background-color: var(--filter-back);
+    transition: 200ms all ease;
+}
+
+.form-item label input:hover {
+    background-color: var(--filter-back-hover);
+}
+
+.c_point_btn {
+    transition: 100ms all ease;
+}
+
+.c_point_btn {
+    cursor: pointer;
+}
+
 .c_point_wrapper {
     position: relative;
     transition: 200ms all ease;
@@ -687,7 +889,7 @@ export default {
 }
 
 .c_point_wrapper:hover {
-    color: #fff;
+    color: var(--color-text);
 }
 
 .c_point_wrapper:hover .c_point_items {
@@ -704,7 +906,7 @@ export default {
     position: absolute;
     top: 25px;
     right: 0;
-    width: 167px;
+    width: 200px;
     z-index: 999999;
 }
 
@@ -887,7 +1089,7 @@ export default {
 
 .post-rev-right {
     position: relative;
-    background-color: var(--input-back);
+    background-color: var(--nav-back);
     padding: 20px;
     border-radius: 7px;
 }
@@ -1055,6 +1257,7 @@ input[type="file"] {
     padding: 10px;
     background-color: var(--icon-back);
     border-radius: 7px;
+    position: relative;
 }
 
 .acc-acc-logout i {
@@ -1063,7 +1266,7 @@ input[type="file"] {
 
 .acc-acc {
     position: absolute;
-    width: 300px;
+    width: 380px;
     /* height: 200px; */
     top: 50%;
     left: 50%;

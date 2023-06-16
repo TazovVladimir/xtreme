@@ -12,6 +12,8 @@ export default {
             selected_color: '',
             sort_value: 'new',
             items: [],
+            selected_sex: '',
+            is_drop_sex: '',
         }
     },
 
@@ -34,11 +36,16 @@ export default {
         resetALL() {
             this.is_drop_type = false,
                 this.is_drop_color = false,
+                this.is_drop_sex = false,
                 this.rangeValue = 11800,
                 this.selected_type = '',
                 this.search_value = '',
                 this.selected_color = '',
-                this.sort_value = 'new'
+                this.sort_value = 'new',
+                this.selected_sex = ''
+        },
+        open_drop_sex(){
+            this.is_drop_sex = !this.is_drop_sex
         }
     },
     mounted() {
@@ -67,8 +74,9 @@ export default {
                 const searchQueryMatch = item.title.toLowerCase().includes(this.search_value.toLowerCase());
                 const selectedTypeMatch = this.selected_type.length === 0 || this.selected_type.includes(item.type);
                 const selectedColorMatch = this.selected_color.length === 0 || this.selected_color.includes(item.color);
+                const selectedSexMatch = this.selected_sex.length === 0 || this.selected_sex.includes(item.sex);
                 const priceMatch = this.rangeValue === 0 || item.new_price <= this.rangeValue;
-                return searchQueryMatch && selectedTypeMatch && selectedColorMatch && priceMatch;
+                return searchQueryMatch && selectedTypeMatch && selectedColorMatch && selectedSexMatch && priceMatch;
             });
             if (this.sort_value === 'cheap') {
                 filteredItems.sort((a, b) => {
@@ -191,6 +199,35 @@ export default {
                             <input class="select_hidden_input" type="radio" id="grey" value="grey"
                                 v-model="selected_color">
                             <label for="grey">Серый</label>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            <li class="filter_item" title="Пол">
+                <div class="filter_drop paint">
+                    <div class="filter_drop_btn_paint" @click="open_drop_sex">
+                        <i class='bx bx-male-sign'></i>
+                    </div>
+                    <div class="filter_drop_el" :class="{ filter_drop_el_show: is_drop_sex }">
+                        <div class="filter_drop_item">
+                            <input class="select_hidden_input" type="radio" id="sex_reset" value=""
+                                v-model="selected_sex">
+                            <label for="sex_reset">Все</label>
+                        </div>
+                        <div class="filter_drop_item">
+                            <input class="select_hidden_input" type="radio" id="мужской" value="мужской"
+                                v-model="selected_sex">
+                            <label for="мужской">Мужской</label>
+                        </div>
+                        <div class="filter_drop_item">
+                            <input class="select_hidden_input" type="radio" id="женский" value="женский"
+                                v-model="selected_sex">
+                            <label for="женский">Женский</label>
+                        </div>
+                        <div class="filter_drop_item">
+                            <input class="select_hidden_input" type="radio" id="унисекс" value="унисекс"
+                                v-model="selected_sex">
+                            <label for="унисекс">Унисекс</label>
                         </div>
                     </div>
                 </div>

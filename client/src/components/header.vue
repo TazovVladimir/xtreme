@@ -199,11 +199,11 @@ export default {
                                 </li>
                             </ul>
                         </li>
-                        <li class="dropdownn-li">
+                        <!-- <li class="dropdownn-li">
                             <i class='p-icon-catalog bx bx-dock-left bx-xs'></i>
                             <span class="dropdownn-span">Размер меню</span>
                             <i id="arrow-close" @click="menu_size" class='size-icon bx bx-expand-horizontal'></i>
-                        </li>
+                        </li> -->
                     </ul>
                 </li>
             </ul>
