@@ -16,32 +16,30 @@ export default {
     methods: {
         auth() {
             const { login, password } = this;
-            try {
-                axios.post('/auth', { login, password })
-                    .then(response => {
-                        localStorage.setItem('token', response.data.token);
-                        localStorage.setItem('admin', response.data.admin);
-                        this.$store.dispatch('setUserStatus');
-                        this.$store.dispatch('setUserId');
-                        let admin = localStorage.getItem('admin');
-                        this.isError = false;
-                        if (admin == '0') {
-                            this.$router.push('/account');
-                        }else if (admin == '1') {
-                            this.$router.push('/admin');
-                        }
-                        window.location.reload();
-                    })
-                    .catch(error => (console.log(error)));
-            } catch (error) {
-                console.error(error);
-                this.error = true,
-                    this.isnTrue = true,
-                    this.isnTruep = true,
-                    this.isDisabled = true,
-                    this.isTrue = false,
-                    this.isTruep = false
-            }
+            axios.post('/auth', { login, password })
+                .then(response => {
+                    localStorage.setItem('token', response.data.token);
+                    localStorage.setItem('admin', response.data.admin);
+                    this.$store.dispatch('setUserStatus');
+                    this.$store.dispatch('setUserId');
+                    let admin = localStorage.getItem('admin');
+                    this.isError = false;
+                    if (admin == '0') {
+                        this.$router.push('/account');
+                    } else if (admin == '1') {
+                        this.$router.push('/admin');
+                    }
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error(error);
+                    this.error = true;
+                    this.isnTrue = true;
+                    this.isnTruep = true;
+                    this.isDisabled = true;
+                    this.isTrue = false;
+                    this.isTruep = false;
+            })
         },
 
         validateInputs() {
@@ -81,7 +79,7 @@ export default {
             } else if (admin == '1') {
                 this.$router.push('/admin');
             }
-        }else{
+        } else {
             this.$router.push('/auth');
         }
         window.scrollTo({
